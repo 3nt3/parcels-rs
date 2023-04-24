@@ -1,22 +1,39 @@
 use cfg_if::cfg_if;
 use leptos::*;
-use leptos_meta::*;
 use leptos_router::*;
 
 cfg_if! {
-    if #[cfg(feature = "ssr")] {
-        pub fn register_server_functions() {
-            _ = AddParcel::register();
-            _ = DeleteParcel::register();
-            _ = GetParcels::register();
-        }
+  if #[cfg(feature = "ssr")] {
+    use sqlx::{Connection, PgConnection};
+
+    pub async fn db() -> Result<PgConnection, ServerFnError> {
+      PgConnection::connect("postgres://parcels:parcels@localhost:46257/parcels").await.map_err(|e| ServerFnError::ServerError(e.to_string()))
     }
+
+    pub fn register_server_functions() {
+        _ = AddParcel::register();
+        _ = DeleteParcel::register();
+        _ = GetParcels::register();
+    }
+  }
 }
 
-#[server(AddParcel, "/api", "Cbor")]
-async fn add_parcel(parcel_id: String) -> Result<String, ServerFnError> {
-    println!("parcel id: {parcel_id}");
-    Ok(format!("Added parcel {}", parcel_id))
+#[server(AddParcel, "/api")]
+pub async fn add_parcel(parcel_id: String) -> Result<String, ServerFnError> {
+    println!("WE'VE REACHED THIS TOP PART YEAH BOI");
+    let mut conn = db().await?;
+
+    leptos::log!("WE'VE REACHED THIS PART YEAH BOI");
+    let lol = sqlx::query!("insert into parcels (tracking_id) values ($1) returning id", parcel_id)
+      .fetch_one(&mut conn)
+      .await
+      .map_err(|e| ServerFnError::ServerError(e.to_string()))?
+      .id;
+    dbg!(&lol);
+
+
+    println!("Added parcel {} ({})", parcel_id, &lol);
+    Ok(format!("Added parcel {} ({})", parcel_id, &lol))
 }
 
 #[server(GetParcels, "/api")]
@@ -33,7 +50,6 @@ async fn delete_parcel(parcel_id: String) -> Result<String, ServerFnError> {
 pub fn HomePage(cx: Scope) -> impl IntoView {
     let add_parcel = create_server_multi_action::<AddParcel>(cx);
     let delete_parcel = create_server_action::<DeleteParcel>(cx);
-    let submissions = add_parcel.submissions();
 
     let parcels = create_resource(
         cx,
