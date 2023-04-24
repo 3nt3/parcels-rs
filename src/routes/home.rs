@@ -20,10 +20,8 @@ cfg_if! {
 
 #[server(AddParcel, "/api")]
 pub async fn add_parcel(parcel_id: String) -> Result<String, ServerFnError> {
-    println!("WE'VE REACHED THIS TOP PART YEAH BOI");
     let mut conn = db().await?;
 
-    leptos::log!("WE'VE REACHED THIS PART YEAH BOI");
     let lol = sqlx::query!("insert into parcels (tracking_id) values ($1) returning id", parcel_id)
       .fetch_one(&mut conn)
       .await
@@ -58,7 +56,7 @@ pub fn HomePage(cx: Scope) -> impl IntoView {
     );
 
     view! {cx,
-      <h1>"Home"</h1>
+      <h1 class="text-red-300">"Home"</h1>
       <MultiActionForm action=add_parcel>
         <label>
           "Add parcel"
