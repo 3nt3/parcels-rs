@@ -6,6 +6,7 @@ async fn main() {
     use leptos_axum::{generate_route_list, LeptosRoutes};
     use parcels_rs::app::*;
     use parcels_rs::fileserv::file_and_error_handler;
+    use parcels_rs::routes::home;
     use std::sync::Arc;
 
     simple_logger::init_with_level(log::Level::Debug).expect("couldn't initialize logging");
@@ -19,6 +20,9 @@ async fn main() {
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
     let routes = generate_route_list(|cx| view! { cx, <App/> }).await;
+
+    // register server functions
+    home::register_server_functions();
 
     // build our application with a route
     let app = Router::new()
