@@ -1,5 +1,5 @@
 [package]
-name = "start-axum"
+name = "parcels-rs"
 version = "0.1.0"
 edition = "2021"
 
@@ -28,14 +28,14 @@ http = "0.2.8"
 [features]
 hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
 ssr = [
-    "dep:axum", 
-    "dep:tokio", 
-    "dep:tower", 
-    "dep:tower-http", 
-    "dep:leptos_axum", 
-    "leptos/ssr", 
-    "leptos_meta/ssr", 
-    "leptos_router/ssr", 
+    "dep:axum",
+    "dep:tokio",
+    "dep:tower",
+    "dep:tower-http",
+    "dep:leptos_axum",
+    "leptos/ssr",
+    "leptos_meta/ssr",
+    "leptos_router/ssr",
     "dep:tracing"
 ]
 
@@ -51,7 +51,6 @@ skip_feature_sets = [["ssr", "hydrate"]]
 
 [package.metadata.leptos]
 # The name used by wasm-bindgen/cargo-leptos for the JS/WASM bundle. Defaults to the crate name
-output-name = "start-axum"
 
 # The site root folder is where cargo-leptos generate all output. WARNING: all content of this folder will be erased on a rebuild. Use it in your server setup.
 site-root = "target/site"

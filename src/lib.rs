@@ -3,6 +3,8 @@ pub mod app;
 pub mod error_template;
 pub mod fileserv;
 
+pub mod routes;
+
 cfg_if! { if #[cfg(feature = "hydrate")] {
     use leptos::*;
     use wasm_bindgen::prelude::wasm_bindgen;
