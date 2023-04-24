@@ -21,6 +21,16 @@ pub fn App(cx: Scope) -> impl IntoView {
 
         // content for this welcome page
         <Router>
+            <nav class="w-screen bg-slate-900 py-4 text-slate-50 text-xl flex flex-row justify-center">
+                <ul class="flex gap-8 justify-center flex-row">
+                    <li>
+                        <span class="">"📦 parcels.rs"</span>
+                    </li>
+                    <li>
+                        <span class="">"x/x packages delivered"</span>
+                    </li>
+                </ul>
+            </nav>
             <main>
                 <Routes>
                     <Route path="" view=|cx| view! { cx, <HomePage/> }/>
