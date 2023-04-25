@@ -80,10 +80,12 @@ async fn get_parcels(cx: Scope) -> Result<Vec<Parcel>, ServerFnError> {
 }
 
 #[server(DeleteParcel, "/api")]
-async fn delete_parcel(parcel_id: String) -> Result<(), ServerFnError> {
+async fn delete_parcel(parcel_id: i32) -> Result<(), ServerFnError> {
     let mut conn = db().await?;
 
-    sqlx::query!("delete from parcels where tracking_id = $1", parcel_id)
+    println!("deleting {parcel_id}");
+
+    sqlx::query!("delete from parcels where id = $1;", parcel_id)
         .execute(&mut conn)
         .await
         .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
@@ -143,11 +145,13 @@ fn ParcelItem(
     view! {
       cx,
       <Container>
-        <div>{parcel.carrier.to_string()}</div>
-        <ActionForm action=delete_parcel clone:parcel>
-          <input type="hidden" name="parcel_id" value={parcel.tracking_id} />
-          <input type="submit" value="Delete"/>
-        </ActionForm>
+        <div class="flex flex-col items-start">
+          <div>{parcel.carrier.to_string()}</div>
+          <ActionForm action=delete_parcel clone:parcel>
+            <input type="hidden" name="parcel_id" value={parcel.id} />
+            <input type="submit" value="Delete"/>
+          </ActionForm>
+        </div>
       </Container>
     }
 }
