@@ -3,6 +3,7 @@ use leptos::*;
 use leptos_router::*;
 use serde::{Deserialize, Serialize};
 
+use crate::models::{Carrier, Parcel};
 use crate::components::container::*;
 
 cfg_if! {
@@ -18,15 +19,6 @@ cfg_if! {
         _ = DeleteParcel::register();
         _ = GetParcels::register();
     }
-
-    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, sqlx::FromRow)]
-    pub struct Parcel {
-      pub id: i32,
-      pub tracking_id: String,
-      pub created_at: chrono::DateTime<chrono::Utc>,
-      pub carrier: Carrier
-    }
-
 
     impl sqlx::Decode<'_, sqlx::Postgres> for Carrier {
       fn decode(
@@ -45,23 +37,9 @@ cfg_if! {
         sqlx::postgres::PgTypeInfo::with_name("varchar")
       }
     }
-
-  } else {
-    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-    pub struct Parcel {
-      pub id: i32,
-      pub tracking_id: String,
-      pub created_at: chrono::DateTime<chrono::Utc>,
-      pub carrier: Carrier
-    }
   }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Carrier {
-    DHL,
-    Unknown(String),
-}
 
 impl std::fmt::Display for Carrier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -124,23 +102,23 @@ async fn get_parcels(cx: Scope) -> Result<Vec<Parcel>, ServerFnError> {
 }
 
 #[server(DeleteParcel, "/api")]
-async fn delete_parcel(parcel_id: String) -> Result<String, ServerFnError> {
-    Ok(format!("Deleted parcel {}", parcel_id))
+async fn delete_parcel(parcel_id: String) -> Result<(), ServerFnError> {
+  Ok(())
 }
 
 #[component]
 pub fn HomePage(cx: Scope) -> impl IntoView {
-    let add_parcel = create_server_multi_action::<AddParcel>(cx);
     let delete_parcel = create_server_action::<DeleteParcel>(cx);
+    let add_parcel = create_server_multi_action::<AddParcel>(cx);
 
     let parcels = create_resource(
         cx,
-        move || (add_parcel.version().get(), delete_parcel.version().get()),
+        move || (add_parcel.version().get()),
         move |_| get_parcels(cx),
     );
 
     view! {cx,
-      <div class="max-w-screen-sm overflow-hidden flex flex-col gap-8 items-start">
+      <div class="max-w-[700px] flex flex-col gap-8 items-start">
         <h1 class="mt-8 text-slate-50 text-4xl font-bold">"Home"</h1>
         <Container>
           <MultiActionForm action=add_parcel class="flex flex-col gap-4 items-start">
@@ -158,13 +136,7 @@ pub fn HomePage(cx: Scope) -> impl IntoView {
               Ok(parcels) => {
                 parcels.into_iter().map(move |parcel: Parcel| {
                   view! {cx,
-                    <div>
-                      <div>{format!("{:?}", &parcel)}</div>
-                      <ActionForm action=delete_parcel>
-                        <input type="hidden" name="parcel_id" value={&parcel.tracking_id.clone()} />
-                        <input type="submit" value="Delete"/>
-                      </ActionForm>
-                    </div>
+                    <ParcelItem parcel=parcel delete_parcel=delete_parcel.clone() />
                   }
                 }).collect::<Vec<_>>()
                 .into_view(cx)
@@ -173,5 +145,19 @@ pub fn HomePage(cx: Scope) -> impl IntoView {
           }}
         </Transition>
       </div>
+    }
+}
+
+#[component]
+fn ParcelItem(cx: Scope, parcel: Parcel, delete_parcel: Action<DeleteParcel, Result<(), ServerFnError>>) -> impl IntoView {
+    view! {
+      cx,
+        <div>
+          <div>{format!("{:?}", &parcel)}</div>
+          <ActionForm action=delete_parcel>
+            <input type="hidden" name="parcel_id" value={&parcel.tracking_id.clone()} />
+            <input type="submit" value="Delete"/>
+          </ActionForm>
+        </div>
     }
 }
