@@ -54,7 +54,7 @@ cfg_if! {
       pub created_at: chrono::DateTime<chrono::Utc>,
       pub carrier: Carrier
     }
-}
+  }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -111,7 +111,7 @@ pub async fn add_parcel(parcel_id: String) -> Result<String, ServerFnError> {
     Ok(format!("Added parcel {} ({})", parcel_id, &lol))
 }
 
-#[server(GetParcels, "/api")]
+#[server(GetParcels, "/api", "getjson")]
 async fn get_parcels(cx: Scope) -> Result<Vec<Parcel>, ServerFnError> {
     let mut conn = db().await?;
 
@@ -140,7 +140,7 @@ pub fn HomePage(cx: Scope) -> impl IntoView {
     );
 
     view! {cx,
-      <div class="max-w-screen-sm flex flex-col gap-8 items-start">
+      <div class="max-w-screen-sm overflow-hidden flex flex-col gap-8 items-start">
         <h1 class="mt-8 text-slate-50 text-4xl font-bold">"Home"</h1>
         <Container>
           <MultiActionForm action=add_parcel class="flex flex-col gap-4 items-start">

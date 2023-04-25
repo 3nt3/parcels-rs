@@ -1589,6 +1589,7 @@ dependencies = [
  "leptos_router",
  "log",
  "serde",
+ "serde_json",
  "simple_logger",
  "sqlx",
  "thiserror",
