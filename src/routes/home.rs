@@ -1,10 +1,9 @@
 use cfg_if::cfg_if;
 use leptos::*;
 use leptos_router::*;
-use serde::{Deserialize, Serialize};
 
-use crate::models::{Carrier, Parcel};
 use crate::components::container::*;
+use crate::models::{Carrier, Parcel};
 
 cfg_if! {
   if #[cfg(feature = "ssr")] {
@@ -40,35 +39,12 @@ cfg_if! {
   }
 }
 
-
 impl std::fmt::Display for Carrier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Carrier::DHL => write!(f, "dhl"),
-            Carrier::Unknown(carrier) => write!(f, "{}", carrier),
+            Carrier::DHL => write!(f, "DHL"),
+            Carrier::Unknown(carrier) => write!(f, "Unknown carrier '{}'", carrier),
         }
-    }
-}
-
-impl Serialize for Carrier {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(match self {
-            Carrier::DHL => "dhl",
-            Carrier::Unknown(carrier) => carrier,
-        })
-    }
-}
-
-impl<'de> Deserialize<'de> for Carrier {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        Ok(match s.as_str() {
-            "dhl" => Carrier::DHL,
-            _ => Carrier::Unknown(s),
-        })
     }
 }
 
@@ -89,7 +65,7 @@ pub async fn add_parcel(parcel_id: String) -> Result<String, ServerFnError> {
     Ok(format!("Added parcel {} ({})", parcel_id, &lol))
 }
 
-#[server(GetParcels, "/api", "getjson")]
+#[server(GetParcels, "/api")]
 async fn get_parcels(cx: Scope) -> Result<Vec<Parcel>, ServerFnError> {
     let mut conn = db().await?;
 
@@ -98,12 +74,21 @@ async fn get_parcels(cx: Scope) -> Result<Vec<Parcel>, ServerFnError> {
         .await
         .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
 
+    dbg!(&parcels);
+
     Ok(parcels)
 }
 
 #[server(DeleteParcel, "/api")]
 async fn delete_parcel(parcel_id: String) -> Result<(), ServerFnError> {
-  Ok(())
+    let mut conn = db().await?;
+
+    sqlx::query!("delete from parcels where tracking_id = $1", parcel_id)
+        .execute(&mut conn)
+        .await
+        .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
+
+    Ok(())
 }
 
 #[component]
@@ -113,12 +98,12 @@ pub fn HomePage(cx: Scope) -> impl IntoView {
 
     let parcels = create_resource(
         cx,
-        move || (add_parcel.version().get()),
+        move || (add_parcel.version().get(), delete_parcel.version().get()),
         move |_| get_parcels(cx),
     );
 
     view! {cx,
-      <div class="max-w-[700px] flex flex-col gap-8 items-start">
+      <div class="w-[600px] flex flex-col gap-8 items-start">
         <h1 class="mt-8 text-slate-50 text-4xl font-bold">"Home"</h1>
         <Container>
           <MultiActionForm action=add_parcel class="flex flex-col gap-4 items-start">
@@ -136,7 +121,7 @@ pub fn HomePage(cx: Scope) -> impl IntoView {
               Ok(parcels) => {
                 parcels.into_iter().map(move |parcel: Parcel| {
                   view! {cx,
-                    <ParcelItem parcel=parcel delete_parcel=delete_parcel.clone() />
+                    <ParcelItem clone:parcel parcel={parcel} delete_parcel=delete_parcel />
                   }
                 }).collect::<Vec<_>>()
                 .into_view(cx)
@@ -148,16 +133,21 @@ pub fn HomePage(cx: Scope) -> impl IntoView {
     }
 }
 
+/// Render a single parcel tile
 #[component]
-fn ParcelItem(cx: Scope, parcel: Parcel, delete_parcel: Action<DeleteParcel, Result<(), ServerFnError>>) -> impl IntoView {
+fn ParcelItem(
+    cx: Scope,
+    parcel: Parcel,
+    delete_parcel: Action<DeleteParcel, Result<(), ServerFnError>>,
+) -> impl IntoView {
     view! {
       cx,
-        <div>
-          <div>{format!("{:?}", &parcel)}</div>
-          <ActionForm action=delete_parcel>
-            <input type="hidden" name="parcel_id" value={&parcel.tracking_id.clone()} />
-            <input type="submit" value="Delete"/>
-          </ActionForm>
-        </div>
+      <Container>
+        <div>{parcel.carrier.to_string()}</div>
+        <ActionForm action=delete_parcel clone:parcel>
+          <input type="hidden" name="parcel_id" value={parcel.tracking_id} />
+          <input type="submit" value="Delete"/>
+        </ActionForm>
+      </Container>
     }
 }
