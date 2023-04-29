@@ -6,6 +6,7 @@ pub mod fileserv;
 pub mod routes;
 pub mod components;
 pub mod models;
+pub mod providers;
 
 cfg_if! { if #[cfg(feature = "hydrate")] {
     use leptos::*;

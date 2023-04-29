@@ -4,6 +4,7 @@ use leptos_router::*;
 
 use crate::components::container::*;
 use crate::models::{Carrier, Parcel};
+use crate::providers::{self, dhl};
 
 cfg_if! {
   if #[cfg(feature = "ssr")] {
@@ -17,6 +18,7 @@ cfg_if! {
         _ = AddParcel::register();
         _ = DeleteParcel::register();
         _ = GetParcels::register();
+        _ = TrackParcel::register();
     }
 
     impl sqlx::Decode<'_, sqlx::Postgres> for Carrier {
@@ -83,14 +85,33 @@ async fn get_parcels(cx: Scope) -> Result<Vec<Parcel>, ServerFnError> {
 async fn delete_parcel(parcel_id: i32) -> Result<(), ServerFnError> {
     let mut conn = db().await?;
 
-    println!("deleting {parcel_id}");
-
     sqlx::query!("delete from parcels where id = $1;", parcel_id)
         .execute(&mut conn)
         .await
         .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
 
     Ok(())
+}
+
+#[server(TrackParcel, "/api")]
+async fn track_parcel(parcel_id: i32) -> Result<(), ServerFnError> {
+    let mut conn = db().await?;
+
+    let parcel = sqlx::query_as::<_, Parcel>("select * from parcels where id = $1")
+        .bind(parcel_id)
+        .fetch_one(&mut conn)
+        .await
+        .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
+
+    match parcel.carrier {
+        Carrier::DHL => dhl::track_parcel(parcel.tracking_id)
+            .await
+            .map_err(|e| ServerFnError::ServerError(e.to_string())),
+        _ => Err(ServerFnError::ServerError(format!(
+            "Unknown carrier: {}",
+            parcel.carrier
+        ))),
+    }
 }
 
 #[component]
@@ -142,6 +163,8 @@ fn ParcelItem(
     parcel: Parcel,
     delete_parcel: Action<DeleteParcel, Result<(), ServerFnError>>,
 ) -> impl IntoView {
+    let track_parcel = create_server_action::<TrackParcel>(cx);
+
     view! {
       cx,
       <Container>
@@ -150,6 +173,10 @@ fn ParcelItem(
           <ActionForm action=delete_parcel clone:parcel>
             <input type="hidden" name="parcel_id" value={parcel.id} />
             <input type="submit" value="Delete"/>
+          </ActionForm>
+          <ActionForm action=track_parcel clone:parcel>
+            <input type="hidden" name="parcel_id" value={parcel.id} />
+            <input type="submit" value="Track"/>
           </ActionForm>
         </div>
       </Container>

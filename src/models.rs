@@ -6,6 +6,26 @@ pub enum Carrier {
     Unknown(String),
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TrackingInfo {
+    events: Vec<TrackingEvent>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TrackingEvent {
+    status: TrackingStatus,
+    location: String,
+    timestamp: chrono::DateTime<chrono::Utc>,
+    description: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TrackingStatus {
+    InTransit,
+    Delivered,
+    Exception,
+    Unknown,
+}
 
 use cfg_if::cfg_if;
 
